@@ -1,3 +1,4 @@
 URL = "https://kalektar.org"
-P_ST_MSG = "\n=> Process stopped."
+# URL = "https://kalektar.org/names"
+PROC_STOP_MSG = "\n=> Process stopped."
 NA_SIGN = "N/A"
