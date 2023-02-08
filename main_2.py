@@ -1,12 +1,12 @@
 import sys
 import pyppeteer.errors
 import requests
+import requests_html
 import json
 import fake_useragent
 from requests_html import HTMLSession
 from datetime import datetime
 from parsing_tools import get_authors_by_letter, get_author_events, get_event_data
-from copy import deepcopy
 import time
 from random import randint
 from config import PROC_STOP_MSG, URL, NA_SIGN
@@ -85,7 +85,8 @@ def get_response_per_scroll(response, lang):
         else:
             yield response
 
-def get_all_authors_list(all_authors_list, response, lang):
+def get_all_authors_dict(all_authors_dict, response, lang):
+    """ Return all authors from English url """
     gen = get_response_per_scroll(response, lang)
     while True:
         try:
@@ -94,44 +95,72 @@ def get_all_authors_list(all_authors_list, response, lang):
             break
         authors_per_scroll = get_authors_by_letter(next_response)
         for author in authors_per_scroll:
-            if author not in all_authors_list:
-                all_authors_list.append(author)
-    return all_authors_list
+            author_link = tuple(author)[0]
+            if author_link not in all_authors_dict:
+                all_authors_dict.update(author)
+    return all_authors_dict
 
-def change_order_in_author_data(list_author):
-        data = [v for _, v in list_author.items()][0]
+def change_order_in_author_data(author_from_dict):
         key_order = ('name_en', 'name_be', 'name_ru', 'occupation', 'link', 'source')
-        new_data = dict((k, data.get(k, NA_SIGN)) for k in key_order)
-        key = [i for i in list_author.keys()][0]
-        list_author[key] = new_data
-        return list_author
+        new_author_from_dict = dict((k, author_from_dict.get(k, NA_SIGN)) for k in key_order)
+        return new_author_from_dict
 
-def add_name_be_ru_to_all_authors_list(all_authors_list, response, lang):
+def add_name_be_ru_to_all_authors_dict(all_authors_dict, response, lang):
+    """ Add names in Belarusian and Russian to all authors' dict from English url.
+        If
+    """
     count = 0
+    new_name_field = f"name_{lang}"
     for next_response in get_response_per_scroll(response, lang):
         authors_per_scroll = get_authors_by_letter(next_response)
+        count += 1
+        # if count == 2:
+        #     print(2)
         for author in authors_per_scroll:
+            # is_author_in_all_authors = False
+            author_link = tuple(author)[0]
             author_data = [v for _, v in author.items()][0]
-            author_link = author_data['link'].replace(lang+"/", "")
-            is_author_in_all_authors = False
-            for list_author in all_authors_list:
-                try:
-                    list_author_data = [v for _, v in list_author.items()][0]
-                    list_author_link = list_author_data['link'].replace(lang+"/", "")
-                except TypeError:
-                    continue
-                if author_link == list_author_link:
-                    new_name_field = f"name_{lang}"
-                    list_author_data[new_name_field] = author_data["name_en"]
-                    is_author_in_all_authors = True
+            if author_link in all_authors_dict:
+                # is_author_in_all_authors = True
+                author_from_dict_data = all_authors_dict[author_link]
+                if new_name_field not in author_from_dict_data:
+                    author_name = author_data["name_en"] or NA_SIGN
+                    author_from_dict_data[new_name_field] = author_name
                 if lang == "ru":
-                    list_author_ordered = change_order_in_author_data(list_author)
-                    list_author.update(list_author_ordered)
-            if not is_author_in_all_authors:
-                count += 1
-                all_authors_list.append(author)
-                all_authors_list.append({'count': count})
-    return all_authors_list
+                    dict_author_ordered = change_order_in_author_data(author_from_dict_data)
+                    all_authors_dict[author_link] = dict_author_ordered
+            else:
+                all_authors_dict.update(author)
+            # if not is_author_in_all_authors:
+                print(f"Author not in dict: {author_link} ({author_data['name_en']})")
+    return all_authors_dict
+
+def recheck_all_authors_dict(all_authors_dict):
+    langs = {"en": "", "be": "/be", "ru": "/ru"}
+    count = 0
+    for author in all_authors_dict:
+        author_data = all_authors_dict[author]
+        for lang in langs:
+            if author_data.get("name_" + lang) and not author_data["name_" + lang] == "N/A":
+                continue
+            count += 1
+            print(count)
+            for lang in langs:
+                link = author_data["link"][:-27] + langs[lang] + author_data["link"][-27:]
+                session = requests_html.HTMLSession()
+                resp = session.get(link)
+                try:
+                    name = resp.html.find("h1.post-title", first=True).text
+                    if "\n" in name:
+                        name = name.replace("\n", " (") + ")"
+                except AttributeError:
+                    name = "N_A"
+                print(name)
+                author_data["name_" + lang] = name
+            break
+        author_data_new = change_order_in_author_data(author_data)
+        all_authors_dict[author] = author_data_new
+    # return all_authors_dict
 
 def get_author_content():
     """ Prepare the whole content (author's data + events' data) to save. """
@@ -141,26 +170,38 @@ def get_author_content():
     response_be = get_main_response_and_check_200(url+"/be")
     response_ru = get_main_response_and_check_200(url+"/ru")
 
-    all_authors_list = []
-    # all_authors_list = get_all_authors_list(all_authors_list, response, "en")
-    # with open("LA_03.02.2023_all_authors_list_en.json", "w") as jf:
+    # all_authors_list = []
+    all_authors_dict = {}
+    all_authors_list = get_all_authors_dict(all_authors_dict, response, "en")
+    # with open("LA_08.02.2023_all_authors_dict_en.json", "w") as jf:
     #     json.dump(all_authors_list, jf, indent=4, ensure_ascii=False)
-    # with open("all_authors_list.json") as jf:
-    #     all_authors_list = json.load(jf)
+    # with open("LA_06.02.2023_all_authors_dict_en.json") as jf:
+    #     all_authors_dict = json.load(jf)
 
-    # all_authors_list = add_name_be_ru_to_all_authors_list(all_authors_list, response_be, "be")
-    # with open("LA_03.02.2023_all_authors_list_be.json", "w") as jf:
-    #     json.dump(all_authors_list, jf, indent=4, ensure_ascii=False)
-    # with open("all_authors_list_be.json") as jf:
-    #     all_authors_list = json.load(jf)
+    all_authors_dict = add_name_be_ru_to_all_authors_dict(all_authors_dict, response_be, "be")
+    # with open("LA_06.02.2023_all_authors_dict_be.json", "w") as jf:
+    #     json.dump(all_authors_dict, jf, indent=4, ensure_ascii=False)
+    # with open("LA_06.02.2023_all_authors_dict_be.json") as jf:
+    #     all_authors_dict = json.load(jf)
+    #
+    all_authors_dict = add_name_be_ru_to_all_authors_dict(all_authors_dict, response_ru, "ru")
+    # with open("LA_06.02.2023_ru.json", "w") as jf:
+    #     json.dump(all_authors_dict, jf, indent=4, ensure_ascii=False)
 
-    all_authors_list = add_name_be_ru_to_all_authors_list(all_authors_list, response_ru, "ru")
-    with open("LA_03.02.2023_all_authors_list_ru.json", "w") as jf:
-        json.dump(all_authors_list, jf, indent=4, ensure_ascii=False)
+    with open("LA_08.02.2023_all_no_recheck.json", "w") as jf:
+        json.dump(all_authors_dict, jf, indent=4, ensure_ascii=False)
 
-    # print(all_authors_list)
-    count_authors = len(all_authors_list)
-    print(f"[INFO] {count_authors/2} author{'s are' if count_authors > 1 else ' is'} collected from the site.")
+    # with open("LA_06.02.2023_all.json") as jf:
+    #     all_authors_dict = json.load(jf)
+
+    # recheck_all_authors_dict(all_authors_dict)
+    # Can't use it due to the issues with: NOVA, Шестая линия, Michael Veksler, Tasha Arlova
+
+    # with open("LA_08.02.2023_all_with_recheck.json", "w") as jf:
+    #     json.dump(all_authors_dict, jf, indent=4, ensure_ascii=False)
+
+    count_authors = len(all_authors_dict)
+    print(f"[INFO] {count_authors} author{'s are' if count_authors > 1 else ' is'} collected from the site.")
 
     for author in all_authors_list:
         author_data = (lambda auth: [v for _, v in auth.items()])(author)[0]
