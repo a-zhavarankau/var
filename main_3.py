@@ -18,15 +18,15 @@ def timer(func):
         start = datetime.now()
         res = func(*args, **kwargs)
         time = datetime.now() - start
-        print(f"[Timer information] Function {func.__name__!r} executed in time: {time}")
+        print(f"[Timer information] Function {func.__name__!r} executed in time: {str(time)[:7]}")
         return res
     return wrap
 
 
 def get_headers(fake_user_agent=False) -> Dict[str, str]:
     """ Returns headers containing fake useragent if agrument 'fake_user_agent'=True
-        (default=False), else original useragent """
-
+        (default=False), else original useragent.
+    """
     fake_user = fake_useragent.UserAgent().random
     original_user = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " \
                     "(KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
@@ -39,6 +39,8 @@ def get_headers(fake_user_agent=False) -> Dict[str, str]:
 
 
 def get_main_response_and_check_200(url: str, lang: str) -> Any:
+    """ Take an url and return response object if response status is 200 [OK].
+    """
     headers = get_headers(fake_user_agent=True)
     langs = {"en": "", "be": "/be", "ru": "/ru"}
     link = url + langs[lang]
@@ -55,10 +57,12 @@ def get_main_response_and_check_200(url: str, lang: str) -> Any:
 
 
 def get_response_per_scroll(response: Any, lang: str) -> Any:
-    """ Take the main response and provide JS script during 'render()' function.
+    """ Take the response and provide JS script during 'render()' function.
         Script performs (imitates) 'scrolls' amount per every script execution.
         'js_out' is script's output that contain new coordinate of scrolled page bottom
-        and result ("1" - if the main page's bottom is reached, "0" - in other case). """
+        and result ("1" - if the main page's bottom is reached, "0" - in other case).
+        When "1", return response object.
+    """
     language = {"en": "English", "be": "Belarusian", "ru": "Russian"}
     time.sleep(randint(1, 2))
     print(f"\nStart scrolling in {language[lang]}...")
@@ -76,7 +80,6 @@ def get_response_per_scroll(response: Any, lang: str) -> Any:
                      f'}})()'
         counter += 1
         try:
-            # time.sleep(randint(1, 3))
             js_out = response.html.render(timeout=30, sleep=2, script=js_script_down)
             print(f"Scrolling {counter}: {js_out}")
         except pyppeteer.errors.TimeoutError as pyTE:
@@ -95,9 +98,10 @@ def show_dict_as_json(file):
     return json.dumps(json_data, indent=4, ensure_ascii=False)
 
 
-def get_all_authors_list_lang(all_authors_list: List, response, lang: str) -> List[Dict]:
-    """ Add names in Belarusian and Russian to all authors' dict from English url.
-        If
+def get_all_authors_list_lang(all_authors_list: List, response, lang: str) -> List[Author]:
+    """ Add authors to the list of authors by specified language.
+        If author already in list, add name in specified language to author's data.
+        Return list of author objects collected by language.
     """
     for next_response in get_response_per_scroll(response, lang):
         authors_per_scroll = get_authors_by_letter(next_response, lang)
@@ -114,11 +118,12 @@ def get_all_authors_list_lang(all_authors_list: List, response, lang: str) -> Li
                 # print(f"Author not in list: {author.__dict__[f'name_{lang}']}")
     return all_authors_list
 
-def author_dict_into_obj(author_dict) -> Author:
-    author = Author(**author_dict)
-    return author
 
 def check_missed_names(all_authors_list: List) -> None:
+    """ Find authors without EN, BE or RU name. Open author's page by link
+        and get name if exists, then change None to the name or "N/A (EN name)".
+    """
+    print(f"\nStart filling missed names...")
     headers = get_headers(fake_user_agent=True)
     session = requests_html.HTMLSession()
     langs = {"en": "", "be": "/be", "ru": "/ru"}
@@ -135,23 +140,24 @@ def check_missed_names(all_authors_list: List) -> None:
                     except AttributeError:
                         author_name = f"{NA_SIGN} ({author.name_en})"
                     author.__dict__[f"name_{lang}"] = author_name
-                    print(f"[INFO] Author #{count} added: name_{lang} = ", author.__dict__[f"name_{lang}"])
+                    print(f'[INFO] Author #{count} added: name_{lang} = {author.__dict__[f"name_{lang}"]!r}')
             count += 1
-            # print(count, author)
+
 
 
 def get_author_content():
-    """ Prepare the whole content (author's data + events' data) to save. """
+    """ Prepare the whole content (author's data + events' data) to save.
+    """
     print("[INFO] Process started =>")
     url = URL
     data = datetime.now().strftime("%d.%m.%Y")
     all_authors_list = []
 
-    for lang in ("en", "be", "ru"):
-        response = get_main_response_and_check_200(url, lang)
-        all_authors_list = get_all_authors_list_lang(all_authors_list, response, lang)
-        for i in all_authors_list[-3:]:
-            print(i)
+    # for lang in ("en", "be", "ru"):
+    #     response = get_main_response_and_check_200(url, lang)
+    #     all_authors_list = get_all_authors_list_lang(all_authors_list, response, lang)
+
+    a = 0
 
     # response = get_main_response_and_check_200(url, "en")
     # all_authors_list = get_all_authors_list_lang(all_authors_list, response, "en")
@@ -224,13 +230,17 @@ def get_author_content():
 
 
     # Function fixes the issues with: NOVA, Шестая линия, Michael Veksler, Tasha Arlova, Leonid Shchemelev
-    check_missed_names(all_authors_list)
+    # check_missed_names(all_authors_list)
 
-    ### To ALL_AUTHORS_CHECKED file
-    all_authors_for_json = [i.author_obj_into_dict() for i in all_authors_list]
-    with open(f"LA_{data}_all_authors_checked.json", "w", encoding='utf-8') as jf:
-        json.dump(all_authors_for_json, jf, indent=4, ensure_ascii=False)
+    # ### To ALL_AUTHORS_CHECKED file
+    # all_authors_for_json = [i.author_obj_into_dict() for i in all_authors_list]
+    # with open(f"LA_{data}_all_authors_checked.json", "w", encoding='utf-8') as jf:
+    #     json.dump(all_authors_for_json, jf, indent=4, ensure_ascii=False)
 
+    # ### From ALL_AUTHORS file
+    # with open(f"LA_{data}_all_authors_checked.json") as jf:
+    #     all_authors_from_json = json.load(jf)
+    #     all_authors_list = [author_dict_into_obj(i) for i in all_authors_from_json]
 
 
     # authors_without_all_names = []
@@ -238,6 +248,7 @@ def get_author_content():
     #     if not all((author.name_en, author.name_be, author.name_ru)):
     #         authors_without_all_names.append(author)
     #         print(f"{author.name_en} - {author.name_be} - {author.name_ru}")
+
 
     # ### To Authors_without_all_names file
     # all_authors_for_json = [i.author_obj_into_dict() for i in authors_without_all_names]
@@ -250,49 +261,49 @@ def get_author_content():
     #     authors_without_all_names = [author_dict_into_obj(i) for i in authors_without_all_names_json]
     #
     # print(len(authors_without_all_names))
+    a = 0
+    ## From ALL_AUTHORS_CHECKED file
+    with open(f"LA_{data}_all_authors_checked.json") as jf:
+        all_authors_from_json = json.load(jf)
 
+    # Variable 'all_authors_list' contains all authors collected in 3 languages,
+    # and their data except 'events'
+    all_authors_list = [Author.author_dict_into_obj(i) for i in all_authors_from_json]
 
     count_authors = len(all_authors_list)
     print(f"[INFO] {count_authors} author{'s are' if count_authors > 1 else ' is'} collected from the site.")
 
-
     for author in all_authors_list:
-        author_data = (lambda auth: [v for _, v in auth.items()])(author)[0]
-        author_name = author_data['name_en']
-
+        author_link = author.link
         headers = get_headers(fake_user_agent=True)
-        author_events, session_2 = get_author_events(author_data, headers)
-        author_data['events'] = []
+        author_events, session_2 = get_author_events(author_link, headers)
         for event in author_events:
             event_data = get_event_data(event, session_2, headers)
-            author_data['events'].append(event_data)
-        yield (author, author_name, count_authors)
+            author.events.append(event_data)
+        yield author, count_authors
 
 
 def save_content_to_json() -> None:
     """ Get all content about one author and add it to the list.
         At the end of all authors list converted to the json file. """
-    date_time = datetime.now().strftime("%d-%m-%Y_%H-%M")
-    # gen = get_author_content()
-    final_content = []
+    date_time = datetime.now().strftime("%d.%m.%Y_%H-%M")
+    all_authors_in_dict_list = []
     count = 0
-    # while True:
-    #     try:
-    #         author_content, author_name, authors_amount = next(gen)
-    #     except StopIteration:
-    #         break
-    for author_content_and_amount in get_author_content():
-        author_content, author_name, authors_amount = author_content_and_amount
-        final_content.append(author_content)
+    for author_and_amount in get_author_content():
+        if count == 0: print(f"\nStart saving authors to file...")
+        author, authors_amount = author_and_amount
+
+        author_in_dict = author.author_obj_into_dict()
+        all_authors_in_dict_list.append(author_in_dict)
         count += 1
-        print(f"[INFO] {count}/{authors_amount} Author {author_name!r} executed")
+        print(f"[INFO] {count}/{authors_amount} Author {author.name_en!r} executed")
         with open(f"LA_{date_time}.json", "w", encoding='utf-8') as json_file:
-            json.dump(final_content, json_file, indent=4, ensure_ascii=False)
+            json.dump(all_authors_in_dict_list, json_file, indent=4, ensure_ascii=False)
 
 
 @timer
 def mainthread():
-    get_author_content()
+    # get_author_content()
     save_content_to_json()
 
 

@@ -3,14 +3,8 @@ import requests.exceptions
 import requests_html
 from itertools import product
 import time
-# from main_2 import get_headers
+from typing import List, Dict, Set, Tuple, Any
 from config import PROC_STOP_MSG, NA_SIGN, URL
-
-
-def get_letter_block(response):
-    letter_blocks = response.html.find("section.observable-section")
-    for letter_block in letter_blocks:
-        yield letter_block
 
 
 class Author:
@@ -29,23 +23,28 @@ class Author:
         author_dict = dict((k, self.__dict__[k]) for k in key_order)
         return author_dict
 
-    @staticmethod
-    def author_dict_into_obj(author_dict):
-        author = Author(**author_dict)
-        return author
-
     def __str__(self):
         return str(self.author_obj_into_dict())
 
     def __eq__(self, other):
         return self.link == other.link
 
+    @staticmethod
+    def author_dict_into_obj(author_dict):
+        author = Author(**author_dict)
+        return author
 
-def get_authors_by_letter(response, lang) -> dict[str, dict]:
-    """ Returns an authors data in dict
-        :param response:post - title
-            translation - view
-        :return: {name: {name:_, occupation:_, link:_, source:_}} """
+
+def get_letter_block(response):
+    letter_blocks = response.html.find("section.observable-section")
+    for letter_block in letter_blocks:
+        yield letter_block
+
+
+def get_authors_by_letter(response, lang) -> Author:
+    ##################### get_author_by_letter
+    """ Return an object of class Author, containing all data except 'events'
+    """
     for letter_block in get_letter_block(response):
         authors_in_letter = letter_block.find("div[class*='cell-box cell-box-feed public']")
         for author in authors_in_letter:    # Here is 'author' is equal to 'author block'
@@ -53,23 +52,19 @@ def get_authors_by_letter(response, lang) -> dict[str, dict]:
             author_occupation = author.find("div[class*='short-description desc']", first=True).text
             author_token = author.find("a.post-link-box", first=True).links
             author_link = f"https://kalektar.org{author_token.pop()}"
-            # Make all links without "ru" and "be" attachments
-            author_link = author_link.replace("/ru", "") if "/ru" in author_link else author_link.replace("/be", "")
 
+            # Make all 'author_link' without "be" and "ru" attachments
+            author_link = author_link.replace("/ru", "") if "/ru" in author_link else author_link.replace("/be", "")
             author = Author(link=author_link, occupation=author_occupation)
             author.__dict__[f"name_{lang}"] = author_name
             yield author
 
 
-def get_author_events(author_data, headers):
-    """ Returns authors events' block
-    :param author_data:
-    :param headers:
-    :return: event block, session
+def get_author_events(author_link, headers) -> Tuple[List, Any]:
+    """ Return list of events' by author + session
     """
-    author_link = author_data['link']
     session_2 = requests_html.HTMLSession()
-    response_2 = session_2.get(url=author_link, headers=headers)  # <<<<< requests.exceptions.ConnectTimeout: HTTPSConnectionPool(host='kalektar.org', port=443): Max retries exceeded with url: /names/uIjr1NOmQZ7hs7hRCg8a (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x10a485360>, 'Connection to kalektar.org timed out. (connect timeout=None)'))
+    response_2 = session_2.get(url=author_link, headers=headers) # <<<<< requests.exceptions.ConnectTimeout: HTTPSConnectionPool(host='kalektar.org', port=443): Max retries exceeded with url: /names/uIjr1NOmQZ7hs7hRCg8a (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x10a485360>, 'Connection to kalektar.org timed out. (connect timeout=None)'))
 
     page_2 = requests_html.HTML(html=response_2.text)
     events = page_2.find("div[class*='cell-box cell-box-ref public event']")
