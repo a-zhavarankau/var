@@ -1,24 +1,26 @@
 import sys
-import requests.exceptions
-import requests_html
-from itertools import product
 import time
-from typing import List, Dict, Set, Tuple, Any
+from typing import List, Dict, Tuple, Any, Optional, Union, Generator
+import requests_html
+from requests import exceptions
 from config import PROC_STOP_MSG, NA_SIGN, URL
 
 
 class Author:
-    def __init__(self, link, name_en=None, name_be=None, name_ru=None,
-                 occupation=None, source=None, events=None):
+    def __init__(self, link: str, name_en: Optional[str] = None, name_be: Optional[str] = None,
+                 name_ru: Optional[str] = None, occupation: Optional[str] = None,
+                 source: Optional[str] = None, events: Optional[List[Dict]] = None):
         self.link = link
         self.name_en = name_en
         self.name_be = name_be
         self.name_ru = name_ru
         self.occupation = occupation
         self.source = source or URL
-        self.events = events or []
+        self.events = events if events and isinstance(events, list) else []
 
-    def author_obj_into_dict(self):
+    def author_obj_into_dict(self) -> Dict[str, Union[str, Optional[str], Optional[List[Dict]]]]:
+        """ Convert Author instance to the dict with all fields ordered
+        """
         key_order = ('name_en', 'name_be', 'name_ru', 'occupation', 'link', 'source', 'events')
         author_dict = dict((k, self.__dict__[k]) for k in key_order)
         return author_dict
@@ -26,24 +28,25 @@ class Author:
     def __str__(self):
         return str(self.author_obj_into_dict())
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.link == other.link
 
     @staticmethod
-    def author_dict_into_obj(author_dict):
+    def author_dict_into_obj(author_dict: Dict[str, Union[str, Optional[str], Optional[List[Dict]]]]):
+        """ Convert dict to the Author instance
+        """
         author = Author(**author_dict)
         return author
 
 
-def get_letter_block(response):
+def get_letter_block(response: Any) -> Generator:
     letter_blocks = response.html.find("section.observable-section")
     for letter_block in letter_blocks:
         yield letter_block
 
 
-def get_authors_by_letter(response, lang) -> Author:
-    ##################### get_author_by_letter
-    """ Yield an object of class Author (that contains all data except 'events')
+def get_authors_by_letter(response: Any, lang: str) -> Generator[Author, None, None]:
+    """ Yield an object of class Author (which contains all data except 'events')
         from the letter block.
     """
     for letter_block in get_letter_block(response):
@@ -61,14 +64,14 @@ def get_authors_by_letter(response, lang) -> Author:
             yield author
 
 
-def get_author_events(author_link, headers) -> Tuple[List, Any]:
+def get_author_events(author_link: str, headers: Dict) -> Tuple[List, requests_html.HTMLSession]:
     """ Return list of author events + session
     """
     session_2 = requests_html.HTMLSession()
     for i in range(10):
         try:
             response_2 = session_2.get(url=author_link, headers=headers) # <<<<< requests.exceptions.ConnectTimeout: HTTPSConnectionPool(host='kalektar.org', port=443): Max retries exceeded with url: /names/uIjr1NOmQZ7hs7hRCg8a (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x10a485360>, 'Connection to kalektar.org timed out. (connect timeout=None)'))
-        except requests.exceptions.ConnectTimeout:
+        except exceptions.ConnectTimeout:
             if i < 9:
                 print(f"[ERROR] Connection issue. Attempt to reconnect #{i+1} of 10 after 30 seconds...")
                 time.sleep(30)
@@ -80,7 +83,8 @@ def get_author_events(author_link, headers) -> Tuple[List, Any]:
             events = page_2.find("div[class*='cell-box cell-box-ref public event']")
             return events, session_2
 
-def get_event_data(event, session_2, headers):
+
+def get_event_data(event: Any, session_2: requests_html.HTMLSession, headers: Dict) -> Dict[str, str]:
     event_token = event.find("a.post-link-box")[0].links
     event_link = "https://kalektar.org" + event_token.pop()
 

@@ -2,7 +2,7 @@ import sys
 import json
 import time
 from datetime import datetime
-from typing import List, Dict, Set, Tuple, Any
+from typing import List, Dict, Tuple, Any, Generator
 from random import randint
 import pyppeteer.errors
 import requests
@@ -11,10 +11,10 @@ import fake_useragent
 from requests_html import HTMLSession
 from parsing_tools_3 import get_authors_by_letter, get_author_events, get_event_data, Author
 from config import PROC_STOP_MSG, URL, NA_SIGN
-from auxiliary_tools import timer, show_dict_as_json, create_temp_file, get_author_content_from_file
+from auxiliary_tools import timer, show_dict_as_json, create_temp_file, get_author_content_from_json_file
 
 
-def get_headers(fake_user_agent=False) -> Dict[str, str]:
+def get_headers(fake_user_agent: bool = False) -> Dict[str, str]:
     """ Returns headers containing fake useragent if agrument 'fake_user_agent'=True
         (default=False), else original useragent.
     """
@@ -125,7 +125,7 @@ def check_missed_names(all_authors_list: List) -> None:
             count += 1
 
 
-def add_events_to_author(author):
+def add_events_to_author(author: Author) -> Author:
     """ Add all events to author before sending it for saving
     """
     author_link = author.link
@@ -137,11 +137,11 @@ def add_events_to_author(author):
     return author
 
 
-def get_author_content():
+def get_author_content() -> Generator[Tuple[Author, int], None, None]:
     """ Prepare the entire author's content (data + events) to save.
     """
     url = URL
-    all_authors_list = []
+    all_authors_list: List[Author] = []
 
     for lang in ("en", "be", "ru"):
         response = get_main_response_and_check_200(url, lang)
@@ -160,22 +160,25 @@ def get_author_content():
         yield author, count_authors     # Author is full and ready to store
 
 
-def save_content_to_json(source="internet") -> None:
+def save_content_to_json(source: str = "internet") -> None:
     """ Get all content about one author and add it to the list.
         At the end of all authors list converted to the json file. """
     date_time = datetime.now().strftime("%d.%m.%Y_%H-%M")
     all_authors_in_dict_list = []
     count = 0
     if source == "file":
-        author_content = get_author_content_from_file()
+        print("Scanning data from file...")
+        time.sleep(3)
+        author_content = get_author_content_from_json_file()
     else:
         author_content = get_author_content()
 
     for author_and_amount in author_content:
         if count == 0:
             print("\nStart saving authors to file...")
+        author: Author
+        authors_amount: int
         author, authors_amount = author_and_amount
-        print(author)
 
         author_in_dict = author.author_obj_into_dict()
         all_authors_in_dict_list.append(author_in_dict)
@@ -186,7 +189,7 @@ def save_content_to_json(source="internet") -> None:
 
 
 @timer
-def mainthread():
+def mainthread() -> None:
     print("[INFO] Process started =>")
     save_content_to_json(source="file")
 
