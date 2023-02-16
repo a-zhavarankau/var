@@ -12,8 +12,12 @@ from requests_html import HTMLSession
 from parsing_tools_3 import get_authors_by_letter, get_author_events, get_event_data, Author
 from config import PROC_STOP_MSG, URL, NA_SIGN
 from auxiliary_tools import timer, show_dict_as_json, create_temp_file, get_author_content_from_json_file
-from logger import logger
+import logging.config
+from settings import logger_config
 
+
+logging.config.dictConfig(logger_config)
+logger = logging.getLogger('logger')
 
 def get_headers(fake_user_agent: bool = False) -> Dict[str, str]:
     """ Returns headers containing fake useragent if agrument 'fake_user_agent'=True
@@ -164,7 +168,8 @@ def get_author_content() -> Generator[Tuple[Author, int], None, None]:
 def save_content_to_json(source: str = "internet") -> None:
     """ Get all content about one author and add it to the list.
         At the end of all authors list converted to the json file. """
-    date_time = datetime.now().strftime("%d.%m.%Y_%H-%M")
+    date_time = datetime.now().strftime("%Y.%m.%d_%H:%M")
+    filename = f"LA_{date_time}.json"
     all_authors_in_dict_list = []
     count = 0
     if source == "file":
@@ -185,10 +190,10 @@ def save_content_to_json(source: str = "internet") -> None:
         all_authors_in_dict_list.append(author_in_dict)
         count += 1
         print(f"[INFO] {count}/{authors_amount} Author {author.name_en!r} executed")
-        with open(f"LA_{date_time}.json", "w", encoding='utf-8') as json_file:
+        with open(filename, "w", encoding='utf-8') as json_file:
             json.dump(all_authors_in_dict_list, json_file, indent=4, ensure_ascii=False)
 
-    logger.info(f"{authors_amount} author{'s are' if authors_amount > 1 else ' is'} collected from the site.")
+    logger.info(f"{authors_amount} author{'s are' if authors_amount > 1 else ' is'} collected from the site and added to the {filename!r}.")
 
 
 def save_content_to_csv(source: str = "internet") -> None:
@@ -205,4 +210,4 @@ def mainthread() -> None:
 if __name__ == '__main__':
     mainthread()
     print("=== Process finished successfully! ===")
-    logger.info("Process finished successfully!\n")
+    logger.info("=> Process finished successfully!\n")
