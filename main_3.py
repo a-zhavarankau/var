@@ -12,6 +12,7 @@ from requests_html import HTMLSession
 from parsing_tools_3 import get_authors_by_letter, get_author_events, get_event_data, Author
 from config import PROC_STOP_MSG, URL, NA_SIGN
 from auxiliary_tools import timer, show_dict_as_json, create_temp_file, get_author_content_from_json_file
+from logger import logger
 
 
 def get_headers(fake_user_agent: bool = False) -> Dict[str, str]:
@@ -187,13 +188,21 @@ def save_content_to_json(source: str = "internet") -> None:
         with open(f"LA_{date_time}.json", "w", encoding='utf-8') as json_file:
             json.dump(all_authors_in_dict_list, json_file, indent=4, ensure_ascii=False)
 
+    logger.info(f"{authors_amount} author{'s are' if authors_amount > 1 else ' is'} collected from the site.")
+
+
+def save_content_to_csv(source: str = "internet") -> None:
+    pass
+
 
 @timer
 def mainthread() -> None:
     print("[INFO] Process started =>")
+    logger.info("Process started =>")
     save_content_to_json(source="file")
 
 
 if __name__ == '__main__':
     mainthread()
     print("=== Process finished successfully! ===")
+    logger.info("Process finished successfully!\n")
