@@ -24,8 +24,7 @@ def create_temp_file(all_authors_list: List) -> None:
         json.dump(all_authors_for_json, jf, indent=4, ensure_ascii=False)
 
 
-def get_author_content_from_json_file() -> Generator[Tuple[Author, int], None, None]:
-    filename = "LA_all_authors_FULL.json"
+def get_author_content_from_json_file(filename) -> Generator[Tuple[Author, int], None, None]:
     with open(filename) as jf:
         all_authors_from_json = json.load(jf)
 

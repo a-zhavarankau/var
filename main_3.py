@@ -45,6 +45,7 @@ def get_main_response_and_check_200(url: str, lang: str) -> Any:
         response = session.get(link, headers=headers)
     except requests.exceptions.RequestException as reRE:
         print(f"[ERROR] {reRE}{PROC_STOP_MSG}")
+        logger.exception(f"{reRE}{PROC_STOP_MSG}")
         sys.exit()
     if response.status_code == 200:
         return response
@@ -78,11 +79,13 @@ def get_response_per_scroll(response: Any, lang: str) -> Any:
             js_out = response.html.render(timeout=30, sleep=2, script=js_script_down)
             print(f"Scrolling {counter}: {js_out}")
         except pyppeteer.errors.TimeoutError as pyTE:
-            print(f"[ERROR] {pyTE} In the 'render()' function set bigger volume to 'timeout=' (20 by default)."
-                  f"{PROC_STOP_MSG}")
+            pyTE_msg = f"{pyTE}\nIn the 'render()' function, you should set bigger volume to 'timeout=' (20 seconds by default).{PROC_STOP_MSG}"
+            print(f"[ERROR] {pyTE_msg}")
+            logger.exception(pyTE_msg)
             sys.exit()
         except Exception as exc:
             print(f"[ERROR] {exc}")
+            logger.exception(exc)
         else:
             yield response
 
@@ -131,7 +134,8 @@ def check_missed_names(all_authors_list: List) -> None:
 
 
 def add_events_to_author(author: Author) -> Author:
-    """ Add all events to author before sending it for saving
+    """ Get an author without events and add all events to it.
+        Return the author, ready to be saved.
     """
     author_link = author.link
     headers = get_headers(fake_user_agent=True)
@@ -158,7 +162,9 @@ def get_author_content() -> Generator[Tuple[Author, int], None, None]:
     create_temp_file(all_authors_list)
 
     count_authors = len(all_authors_list)
-    print(f"[INFO] {count_authors} author{'s are' if count_authors > 1 else ' is'} collected from the site.")
+    msg_collected = f"{count_authors} author{'s are' if count_authors > 1 else ' is'} collected from the site."
+    print(f"[INFO] {msg_collected}")
+    logger.info(msg_collected)
 
     for author in all_authors_list:
         add_events_to_author(author)
@@ -168,14 +174,15 @@ def get_author_content() -> Generator[Tuple[Author, int], None, None]:
 def save_content_to_json(source: str = "internet") -> None:
     """ Get all content about one author and add it to the list.
         At the end of all authors list converted to the json file. """
-    date_time = datetime.now().strftime("%Y.%m.%d_%H:%M")
+    date_time = datetime.now().strftime("%Y.%m.%d__%H:%M")
     filename = f"LA_{date_time}.json"
     all_authors_in_dict_list = []
     count = 0
     if source == "file":
         print("Scanning data from file...")
+        archive_file = "LA_all_authors_FULL.json"
         time.sleep(3)
-        author_content = get_author_content_from_json_file()
+        author_content = get_author_content_from_json_file(archive_file)
     else:
         author_content = get_author_content()
 
@@ -193,7 +200,11 @@ def save_content_to_json(source: str = "internet") -> None:
         with open(filename, "w", encoding='utf-8') as json_file:
             json.dump(all_authors_in_dict_list, json_file, indent=4, ensure_ascii=False)
 
-    logger.info(f"{authors_amount} author{'s are' if authors_amount > 1 else ' is'} collected from the site and added to the {filename!r}.")
+    if source == "file":
+        logger.info(f"{authors_amount} author{'s are' if authors_amount > 1 else ' is'} collected from the archive file {archive_file!r}.")
+
+    logger.info(f"{authors_amount} author{'s are' if authors_amount > 1 else ' is'} added to the {filename!r}.")
+
 
 
 def save_content_to_csv(source: str = "internet") -> None:
