@@ -1,3 +1,4 @@
+import csv
 import sys
 import json
 import time
@@ -172,33 +173,36 @@ def get_author_content() -> Generator[Tuple[Author, int], None, None]:
 
 
 def save_content_to_json(source: str = "internet") -> None:
-    """ Get all content about one author and add it to the list.
-        At the end of all authors list converted to the json file. """
-    date_time = datetime.now().strftime("%Y.%m.%d__%H:%M")
-    filename = f"LA_{date_time}.json"
-    all_authors_in_dict_list = []
-    count = 0
+    """ Get author as object of class Author, then convert it to the dict
+        and add it to the list of all authors.
+        Finally, increased list of all authors save to the json file. """
     if source == "file":
         print("Scanning data from file...")
         archive_file = "LA_all_authors_FULL.json"
-        time.sleep(3)
+        time.sleep(2)
         author_content = get_author_content_from_json_file(archive_file)
     else:
         author_content = get_author_content()
 
-    for author_and_amount in author_content:
+    date_time = datetime.now().strftime("%Y.%m.%d__%H:%M")
+    filename = f"LA_{date_time}.json"
+    all_authors_as_dicts__list = []
+    count = 0
+
+    for data in author_content:
         if count == 0:
-            print("\nStart saving authors to file...")
-        author: Author
-        authors_amount: int
-        author, authors_amount = author_and_amount
+            print(f"\nStart saving authors to file {filename!r}...")
+            time.sleep(3)
+
+
+        author, authors_amount = data
 
         author_in_dict = author.author_obj_into_dict()
-        all_authors_in_dict_list.append(author_in_dict)
+        all_authors_as_dicts__list.append(author_in_dict)
         count += 1
         print(f"[INFO] {count}/{authors_amount} Author {author.name_en!r} executed")
         with open(filename, "w", encoding='utf-8') as json_file:
-            json.dump(all_authors_in_dict_list, json_file, indent=4, ensure_ascii=False)
+            json.dump(all_authors_as_dicts__list, json_file, indent=4, ensure_ascii=False)
 
     if source == "file":
         logger.info(f"{authors_amount} author{'s are' if authors_amount > 1 else ' is'} collected from the archive file {archive_file!r}.")
@@ -206,16 +210,57 @@ def save_content_to_json(source: str = "internet") -> None:
     logger.info(f"{authors_amount} author{'s are' if authors_amount > 1 else ' is'} added to the {filename!r}.")
 
 
-
 def save_content_to_csv(source: str = "internet") -> None:
-    pass
+    """ Get author as object of class Author, then convert it to the dict
+        and finally write to the csv file with mode "a".
+        When the first author, his dict keys are field names for file. """
+    if source == "file":
+        print("Scanning data from file...")
+        archive_file = "LA_all_authors_FULL.json"
+        time.sleep(2)
+        author_content = get_author_content_from_json_file(archive_file)
+    else:
+        author_content = get_author_content()
+
+    date_time = datetime.now().strftime("%Y.%m.%d__%H:%M")
+    filename = f"LA_{date_time}.csv"
+    count = 0
+
+    for data in author_content:
+        if count == 0:
+            print(f"\nStart saving authors to file {filename!r}...")
+            time.sleep(3)
+
+        author, authors_amount = data
+        author_in_dict = author.author_obj_into_dict()
+
+        with open(filename, "a", encoding='utf-8') as csv_file:
+            if count == 0:
+                author_keys = author_in_dict.keys()
+                field_names = [i for i in author_keys]
+
+            csv_writer = csv.DictWriter(csv_file, fieldnames=field_names)
+
+            csv_writer.writeheader()
+            csv_writer.writerow(author_in_dict)
+
+        count += 1
+        print(f"[INFO] {count}/{authors_amount} Author {author.name_en!r} executed")
+
+
+    if source == "file":
+        logger.info(
+            f"{authors_amount} author{'s are' if authors_amount > 1 else ' is'} collected from the archive file {archive_file!r}.")
+
+    logger.info(f"{authors_amount} author{'s are' if authors_amount > 1 else ' is'} added to the {filename!r}.")
 
 
 @timer
 def mainthread() -> None:
     print("[INFO] Process started =>")
     logger.info("Process started =>")
-    save_content_to_json(source="file")
+    # save_content_to_json(source="file")
+    save_content_to_csv(source="file")
 
 
 if __name__ == '__main__':
