@@ -1,4 +1,5 @@
 import json
+import fake_useragent
 from datetime import datetime
 from parsing_tools_3 import Author
 from typing import List, Dict, Set, Tuple, Any, Callable, Generator
@@ -12,6 +13,21 @@ def timer(func: Callable) -> Callable:
         print(f"[Timer information] Function {func.__name__!r} executed in time: {str(time)[:7]}")
         return res
     return wrap
+
+
+def get_headers(fake_user_agent: bool = False) -> Dict[str, str]:
+    """ Returns headers containing fake useragent if agrument 'fake_user_agent'=True
+        (default=False), else original useragent.
+    """
+    fake_user = fake_useragent.UserAgent().random
+    original_user = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " \
+                    "(KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
+    headers = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,"
+                  "image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        "User-Agent": fake_user if fake_user_agent else original_user,
+    }
+    return headers
 
 
 def show_dict_as_json(dict_: Dict) -> json:

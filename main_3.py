@@ -8,31 +8,16 @@ from random import randint
 import pyppeteer.errors
 import requests
 import requests_html
-import fake_useragent
 from requests_html import HTMLSession
 from parsing_tools_3 import get_authors_by_letter, get_author_events, get_event_data, Author
 from config import PROC_STOP_MSG, URL, NA_SIGN
-from auxiliary_tools import timer, show_dict_as_json, create_temp_file, get_author_content_from_json_file
+from auxiliary_tools import timer, get_headers, show_dict_as_json, create_temp_file, get_author_content_from_json_file
 import logging.config
 from settings import logger_config
 
 
 logging.config.dictConfig(logger_config)
 logger = logging.getLogger('logger')
-
-def get_headers(fake_user_agent: bool = False) -> Dict[str, str]:
-    """ Returns headers containing fake useragent if agrument 'fake_user_agent'=True
-        (default=False), else original useragent.
-    """
-    fake_user = fake_useragent.UserAgent().random
-    original_user = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " \
-                    "(KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
-    headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,"
-                  "image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-        "User-Agent": fake_user if fake_user_agent else original_user,
-    }
-    return headers
 
 
 def get_main_response_and_check_200(url: str, lang: str) -> Any:
@@ -259,8 +244,8 @@ def save_content_to_csv(source: str = "internet") -> None:
 def mainthread() -> None:
     print("[INFO] Process started =>")
     logger.info("Process started =>")
-    # save_content_to_json(source="file")
-    save_content_to_csv(source="file")
+    save_content_to_json(source="file")
+    # save_content_to_csv(source="file")
 
 
 if __name__ == '__main__':
