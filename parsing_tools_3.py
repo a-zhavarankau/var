@@ -65,7 +65,7 @@ def get_authors_by_letter(response: Any, lang: str) -> Generator[Author, None, N
 
 
 def get_author_events(author_link: str, headers: Dict) -> Tuple[List, requests_html.HTMLSession]:
-    """ Return list of author events + session
+    """ Return list of author events + session.
     """
     session_2 = requests_html.HTMLSession()
     for i in range(10):
@@ -84,7 +84,19 @@ def get_author_events(author_link: str, headers: Dict) -> Tuple[List, requests_h
             return events, session_2
 
 
+def text_handler(text: str):
+    """ Check text for unwanted symbol and change it.
+        Example: "Text\ntranslation" -> "Text (translation)".
+    """
+    if "\n" in text:
+        text = text.replace("\n", " (") + ")"
+    return text
+
+
 def get_event_data(event: Any, session_2: requests_html.HTMLSession, headers: Dict) -> Dict[str, str]:
+    """ Return dict containing event data: name, dates,
+        place, link.
+    """
     event_token = event.find("a.post-link-box")[0].links
     event_link = "https://kalektar.org" + event_token.pop()
 
@@ -92,6 +104,7 @@ def get_event_data(event: Any, session_2: requests_html.HTMLSession, headers: Di
     page_3 = requests_html.HTML(html=response_3.text)
     try:
         event_name = page_3.find("h1[class*='post-title translation-view']", first=True).text
+        event_name = text_handler(event_name)
     except AttributeError:
         event_name = NA_SIGN
 
