@@ -169,20 +169,31 @@ def add_events_to_author(author: Author) -> Author:
     return author
 
 
-def start_multiproc_events_collection(all_authors_list):
-    """ Start authors collection in 3 languages simultaneously.
-        Used 'multiprocessing' module.
+def start_multiproc_events_collection(all_authors_list: List[Author]) -> List[Author]:
+
+    return all_authors_w_events
+
+
+def get_all_authors_w_events_list_multiproc():
+    """ Start author events collection simultaneously.
+        Used 'multiprocessing' module. All full-dated authors are in list.
     """
+    # all_authors_list, count_authors = start_multiproc_authors_collection()
+    with open("TEMPooo_all_authors.json") as jf:
+        list = json.load(jf)
+        all_authors_list = [Author.author_dict_into_obj(i) for i in list]
+        count_authors = len(all_authors_list)
+
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()*3) as pool:
-        all_new_authors = pool.map(add_events_to_author, [author for author in all_authors_list])
+        all_authors_w_events = pool.map(add_events_to_author, [author for author in all_authors_list])
         pool.close()
         pool.join()
 
-    print("Multiprocessing events finished")
-    return all_new_authors
+    print("Multiprocessing events collection finished")
+    return all_authors_w_events, count_authors
 
 
-def save_content_to_json(all_new_authors, count_authors) -> None:
+def save_content_to_json(all_authors_w_events, count_authors) -> None:
     """ Get author as object of class Author, then convert it to the dict
         and add it to the list of all authors.
         Finally, increased list of all authors save to the json file. """
@@ -191,7 +202,7 @@ def save_content_to_json(all_new_authors, count_authors) -> None:
     filename = f"MPLA_{date_time}.json"
     all_authors_as_dicts__list = []
     count = 0
-    for author in all_new_authors:
+    for author in all_authors_w_events:
         if count == 0:
             print(f"\nStart saving authors to file {filename!r}...")
             time.sleep(3)
@@ -206,23 +217,10 @@ def save_content_to_json(all_new_authors, count_authors) -> None:
     print(f"{count_authors} author{'s are' if count_authors > 1 else ' is'} added to the {filename!r}.")
 
 
-def main():
-    # all_authors_list, count_authors = start_multiproc_authors_collection()
-    with open("TEMPooo_all_authors.json") as jf:
-        list = json.load(jf)
-        all_authors_list = [Author.author_dict_into_obj(i) for i in list]
-        count_authors = len(all_authors_list)
-
-    all_new_authors = start_multiproc_events_collection(all_authors_list[-20:])
-
-    save_content_to_json(all_new_authors, count_authors)
-        # yield author, count_authors     # Author is full and ready to store
-    # print(all_authors_list, count_authors)
-
-
 if __name__ == "__main__":
     start = datetime.now()
-    main()
+    all_authors_w_events, count_authors = get_all_authors_w_events_list_multiproc()
+    save_content_to_json(all_authors_w_events, count_authors)
     print(f"Mutliprocessing w/Pool time: {datetime.now() - start}")
 
 
