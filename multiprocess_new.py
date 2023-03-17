@@ -1,9 +1,7 @@
 import multiprocessing
-import asyncio
 import csv
 import json
 import sys
-import threading
 import time
 from datetime import datetime
 import requests
@@ -60,6 +58,9 @@ def get_response_per_scroll(response: Any, lang: str) -> Any:
 
 
 def get_all_authors_list_lang(lang: str) -> List[Author]:
+    """ Get responses per scroll and create list of all
+        authors in specified language.
+    """
     url = URL
     response = get_main_response_and_check_200(url, lang)
     print(f"{lang.upper()!r}", response)
@@ -72,9 +73,10 @@ def get_all_authors_list_lang(lang: str) -> List[Author]:
     return all_authors_list_lang, lang
 
 
-def create_all_authors_list(all_authors_dict: Dict[str, Author]):
-    """ Create all_authors_list and fill it with names in
-        EN/BE/RU languages.
+def create_all_authors_list(all_authors_dict: Dict[str, List[Author]]) -> List[Author]:
+    """ Create all_authors_list from dict of authors lists
+        in different languages (separately) and fill it
+        with names in EN/BE/RU languages.
     """
     all_authors_list = []
     for lang in all_authors_dict:
@@ -114,7 +116,7 @@ def check_missed_names(all_authors_list: List) -> None:
             count += 1
 
 
-def handle_all_authors_lists(results: List[Tuple[List, str]]):
+def handle_all_authors_lists(results: List[Author]):
     """ Create final all_authors_list (without events)
         from all lists of authors in EN/BE/RU.
     """
@@ -136,10 +138,10 @@ def handle_all_authors_lists(results: List[Tuple[List, str]]):
     count_authors = len(all_authors_list)
     msg_collected = f"{count_authors} author{'s are' if count_authors > 1 else ' is'} collected from the site."
     print(f"[INFO] {msg_collected}")
-    return all_authors_list, count_authors
+    return all_authors_list
 
 
-def start_multiproc_authors_collection():
+def start_multiproc_authors_collection() -> List[Author]:
     """ Start authors collection in 3 languages simultaneously.
         Used 'multiprocessing' module.
     """
@@ -158,7 +160,7 @@ def add_events_to_author(author: Author) -> Author:
         Return the author, ready to be saved.
     """
     author_link = author.link
-    # Use fake headers to imitate real users
+    # Use many fake headers to imitate real users
     headers = get_headers(fake_user_agent=True)
     time.sleep(1)
     author_events, session_2 = get_author_events(author_link, headers)
@@ -169,20 +171,14 @@ def add_events_to_author(author: Author) -> Author:
     return author
 
 
-def start_multiproc_events_collection(all_authors_list: List[Author]) -> List[Author]:
-
-    return all_authors_w_events
-
-
-def get_all_authors_w_events_list_multiproc():
+def get_all_authors_w_events_list_multiproc() -> List[Author]:
     """ Start author events collection simultaneously.
         Used 'multiprocessing' module. All full-dated authors are in list.
     """
-    # all_authors_list, count_authors = start_multiproc_authors_collection()
-    with open("TEMPooo_all_authors.json") as jf:
-        list = json.load(jf)
-        all_authors_list = [Author.author_dict_into_obj(i) for i in list]
-        count_authors = len(all_authors_list)
+    all_authors_list = start_multiproc_authors_collection()
+    # with open("TEMP_all_authors.json") as jf:
+    #     list = json.load(jf)
+    #     all_authors_list = [Author.author_dict_into_obj(i) for i in list]
 
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()*3) as pool:
         all_authors_w_events = pool.map(add_events_to_author, [author for author in all_authors_list])
@@ -190,10 +186,10 @@ def get_all_authors_w_events_list_multiproc():
         pool.join()
 
     print("Multiprocessing events collection finished")
-    return all_authors_w_events, count_authors
+    return all_authors_w_events
 
 
-def save_content_to_json(all_authors_w_events, count_authors) -> None:
+def save_content_to_json(all_authors_w_events: List[Author]) -> None:
     """ Get author as object of class Author, then convert it to the dict
         and add it to the list of all authors.
         Finally, increased list of all authors save to the json file. """
@@ -201,6 +197,7 @@ def save_content_to_json(all_authors_w_events, count_authors) -> None:
     date_time = datetime.now().strftime("%Y.%m.%d__%H:%M")
     filename = f"MPLA_{date_time}.json"
     all_authors_as_dicts__list = []
+    count_authors = len(all_authors_w_events)
     count = 0
     for author in all_authors_w_events:
         if count == 0:
@@ -219,8 +216,8 @@ def save_content_to_json(all_authors_w_events, count_authors) -> None:
 
 if __name__ == "__main__":
     start = datetime.now()
-    all_authors_w_events, count_authors = get_all_authors_w_events_list_multiproc()
-    save_content_to_json(all_authors_w_events, count_authors)
+    all_authors_w_events = get_all_authors_w_events_list_multiproc()
+    save_content_to_json(all_authors_w_events)
     print(f"Mutliprocessing w/Pool time: {datetime.now() - start}")
 
 
