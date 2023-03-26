@@ -34,9 +34,10 @@ def show_dict_as_json(dict_: Dict) -> json:
     return json.dumps(dict_, indent=4, ensure_ascii=False)
 
 
-def create_temp_file(all_authors_list: List) -> None:
+def create_temp_file(all_authors_list: List,
+                     filename=f"TEMP_all_authors.json") -> None:
     all_authors_for_json = [author.author_obj_into_dict() for author in all_authors_list]
-    with open(f"TEMP_all_authors.json", "w", encoding='utf-8') as jf:
+    with open(filename, "w", encoding='utf-8') as jf:
         json.dump(all_authors_for_json, jf, indent=4, ensure_ascii=False)
 
 
