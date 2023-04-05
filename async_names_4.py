@@ -63,8 +63,8 @@ async def check_missed_names_async(all_authors_list: List[Author]) -> None:
 def async_get_authors_checked_names():
     authors_all_langs_in_dict = main_multiproc()
 
-    ### 3 From dict of authors in all languag es create list,
-    ### where each author is filled in with all names in EN/BE/RU
+    ### 3 From dict of authors in all languages create list,
+    ### 3 where each author is filled in with all names in EN/BE/RU
     all_authors_list = create_all_authors_list(authors_all_langs_in_dict)
     create_temp_file_json(all_authors_list)
 
