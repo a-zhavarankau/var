@@ -1,7 +1,7 @@
 import json
 import fake_useragent
 from datetime import datetime
-from parsing_tools_3 import Author
+from parsing_tools_4 import Author
 from typing import List, Dict, Set, Tuple, Any, Callable, Generator
 
 
@@ -34,16 +34,10 @@ def show_dict_as_json(dict_: Dict) -> json:
     return json.dumps(dict_, indent=4, ensure_ascii=False)
 
 
-def create_temp_file(all_authors_list: List,
-                     filename=f"TEMP_all_authors.json") -> None:
+def create_temp_file_json(all_authors_list: List,
+                          filename: str = "TEMP_all_authors") -> None:
     all_authors_for_json = [author.author_obj_into_dict() for author in all_authors_list]
-    with open(filename, "w", encoding='utf-8') as jf:
-        json.dump(all_authors_for_json, jf, indent=4, ensure_ascii=False)
-
-
-def create_temp_file_lang(all_authors_list, lang) -> None:
-    all_authors_for_json = [author.author_obj_into_dict() for author in all_authors_list]
-    with open(f"TEMP_{lang}_authors.json", "w", encoding='utf-8') as jf:
+    with open(f"{filename}.json", "w", encoding='utf-8') as jf:
         json.dump(all_authors_for_json, jf, indent=4, ensure_ascii=False)
 
 

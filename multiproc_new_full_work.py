@@ -11,7 +11,7 @@ from requests_html import HTMLSession
 from random import randint
 from typing import List, Dict, Tuple, Any, Generator
 from parsing_tools_3 import get_authors_by_letter, get_author_events, get_event_data, Author
-from auxiliary_tools import get_headers, create_temp_file, create_temp_file_lang
+from auxiliary_tools_3 import get_headers, create_temp_file, create_temp_file_lang
 from config import PROC_STOP_MSG, URL, NA_SIGN
 
 
