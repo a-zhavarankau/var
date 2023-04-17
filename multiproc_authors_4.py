@@ -9,6 +9,12 @@ from typing import List, Dict, Tuple, Any
 from parsing_tools_4 import get_authors_by_letter, Author
 from auxiliary_tools_4 import get_headers
 from config import PROC_STOP_MSG, URL
+import logging.config
+from settings import logger_config
+
+
+logging.config.dictConfig(logger_config)
+logger = logging.getLogger('logger')
 
 
 def get_main_response_and_check_200(url: str, lang: str) -> requests.Response:
@@ -22,7 +28,7 @@ def get_main_response_and_check_200(url: str, lang: str) -> requests.Response:
         response = session.get(link, headers=headers)
     except requests.exceptions.RequestException as reRE:
         print(f"[ERROR] {reRE}{PROC_STOP_MSG}")
-        # logger.exception(f"{reRE}{PROC_STOP_MSG}")
+        logger.exception(f"{reRE}{PROC_STOP_MSG}")
         sys.exit()
     if response.status_code == 200:
         return response
@@ -40,8 +46,8 @@ def get_response_per_scroll(response: Any, lang: str) -> Any:
     time.sleep(randint(1, 2))
     print(f"Start scrolling in {language[lang]}...")
     js_out = {'result': 0}
-    counter = -1
-    scrolls = 5
+    counter = -1  # Started from '-1' to load first unscrolled page (usually from '0')
+    scrolls = 5   # Amount of scrolls per script execution = per render()
     scroll_height = 300
     while js_out['result'] == 0:
         js_script_down = f'(function down() {{let y={counter}; for(let i={scrolls}*y;i<{scrolls}*(y+1);i++) ' \
@@ -58,9 +64,11 @@ def get_response_per_scroll(response: Any, lang: str) -> Any:
         except pyppeteer.errors.TimeoutError as pyTE:
             pyTE_msg = f"{pyTE}\nIn the 'render()' function, you should set bigger volume to 'timeout=' (20 seconds by default).{PROC_STOP_MSG}"
             print(f"[ERROR] {pyTE_msg}")
+            logger.exception(pyTE_msg)
             sys.exit()
         except Exception as exc:
-            print(f"888 [ERROR] {exc}")
+            print(f"[ERROR] {exc}")
+            logger.exception(exc)
             sys.exit()
         else:
             yield response

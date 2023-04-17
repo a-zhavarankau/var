@@ -2,7 +2,7 @@ import json
 import fake_useragent
 from datetime import datetime
 from parsing_tools_4 import Author
-from typing import List, Dict, Set, Tuple, Any, Callable, Generator
+from typing import List, Dict, Tuple, Callable, Generator
 
 
 def timer(func: Callable) -> Callable:
@@ -41,7 +41,7 @@ def create_temp_file_json(all_authors_list: List,
         json.dump(all_authors_for_json, jf, indent=4, ensure_ascii=False)
 
 
-def get_author_content_from_json_file(filename) -> Generator[Tuple[Author, int], None, None]:
+def NO_get_author_content_from_json_file(filename) -> Generator[Tuple[Author, int], None, None]:
     with open(filename) as jf:
         all_authors_from_json = json.load(jf)
 

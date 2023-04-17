@@ -6,6 +6,12 @@ from parsing_tools_4 import Author, text_handler
 from auxiliary_tools_4 import get_headers, create_temp_file_json
 from bs4 import BeautifulSoup as bs
 from config import NA_SIGN
+import logging.config
+from settings import logger_config
+
+
+logging.config.dictConfig(logger_config)
+logger = logging.getLogger('logger')
 
 
 def create_all_authors_list(authors_all_langs_in_dict: Dict[str, List[Author]]) -> List[Author]:
@@ -64,7 +70,7 @@ def async_get_authors_checked_names():
     authors_all_langs_in_dict = main_multiproc()
 
     ### 3 From dict of authors in all languages create list,
-    ### 3 where each author is filled in with all names in EN/BE/RU
+    ### where each author is filled in with all names in EN/BE/RU
     all_authors_list = create_all_authors_list(authors_all_langs_in_dict)
     create_temp_file_json(all_authors_list)
 
@@ -77,5 +83,6 @@ def async_get_authors_checked_names():
     count_authors = len(all_authors_list)
     msg_collected = f"{count_authors} author{'s are' if count_authors > 1 else ' is'} collected from the site."
     print(f"[INFO] {msg_collected}")
+    logger.info(msg_collected)
 
     return all_authors_list
