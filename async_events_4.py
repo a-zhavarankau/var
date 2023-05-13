@@ -89,9 +89,9 @@ if __name__ == "__main__":
 
     all_authors_list = async_get_authors_checked_names()
 
-    ### 4 Get full authors' content
+    ### (4/5) Get full authors' content
     all_authors_w_events = asyncio.run(async_get_full_content(all_authors_list))
-    ### 5 Save content
+    ### (5/5) Save content
     save_content_to_json(all_authors_w_events)
 
     msg_finish_success = f"=> Process finished successfully!\nAsync time: {datetime.now() - start}\n"

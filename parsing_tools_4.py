@@ -4,7 +4,7 @@ import random
 from bs4 import BeautifulSoup as bs
 from typing import List, Dict, Tuple, Any, Optional, Union, Generator
 from requests import exceptions
-from config import PROC_STOP_MSG, NA_SIGN, URL
+from config import PROC_STOP_MSG, NA_SIGN, URL, URL_END
 
 
 class Author:
@@ -30,7 +30,8 @@ class Author:
         return str(self.author_obj_into_dict())
 
     def __eq__(self, other) -> bool:
-        return self.link == other.link
+        # Changed to perform  comparison with old links (early: 'self.link == other.link')
+        return self.link.split("/")[-1] == other.link.split("/")[-1]
 
     @staticmethod
     def author_dict_into_obj(author_dict: Dict[str, Union[str, Optional[str], Optional[List[Dict]]]]):
@@ -84,6 +85,7 @@ async def get_author_events_without_data(author: Author, asession) -> List:
     return events
 
 
+# NEED TO HANDLE EXCEPTION
 async def get_event_data_async(event, asession) -> Dict[str, str]:
     """ Return dict containing event data: name, dates,
         place, link.

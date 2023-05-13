@@ -12,7 +12,8 @@ logger_config = {
     },
     'handlers': {
         'logger_handler': {
-            'class': 'logging.FileHandler',     # level = NOTSET(0)
+            'class': 'logging.FileHandler',
+            # level = NOTSET(0),
             'formatter': 'logger_formatter',
             'filename': os.path.join(os.getcwd(), 'log_varta.log'),
         },
